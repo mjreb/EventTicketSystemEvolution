@@ -1,0 +1,192 @@
+version: '3.8'
+
+services:
+  # PostgreSQL databases for each service
+  auth-db:
+    image: postgres:15-alpine
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: auth_service
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    networks:
+      - event-booking-network
+
+  event-db:
+    image: postgres:15-alpine
+    container_name: event-db
+    environment:
+      POSTGRES_DB: event_service
+      POSTGRES_USER: event_user
+      POSTGRES_PASSWORD: event_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - event_db_data:/var/lib/postgresql/data
+    networks:
+      - event-booking-network
+
+  ticket-db:
+    image: postgres:15-alpine
+    container_name: ticket-db
+    environment:
+      POSTGRES_DB: ticket_service
+      POSTGRES_USER: ticket_user
+      POSTGRES_PASSWORD: ticket_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - ticket_db_data:/var/lib/postgresql/data
+    networks:
+      - event-booking-network
+
+  payment-db:
+    image: postgres:15-alpine
+    container_name: payment-db
+    environment:
+      POSTGRES_DB: payment_service
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_password
+    ports:
+      - "5435:5432"
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+    networks:
+      - event-booking-network
+
+  notification-db:
+    image: postgres:15-alpine
+    container_name: notification-db
+    environment:
+      POSTGRES_DB: notification_service
+      POSTGRES_USER: notification_user
+      POSTGRES_PASSWORD: notification_password
+    ports:
+      - "5436:5432"
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    networks:
+      - event-booking-network
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - event-booking-network
+    command: redis-server --appendonly yes
+
+  # Application services
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/auth_service
+      SPRING_DATASOURCE_USERNAME: auth_user
+      SPRING_DATASOURCE_PASSWORD: auth_password
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    depends_on:
+      - auth-db
+      - redis
+    networks:
+      - event-booking-network
+
+  event-service:
+    build:
+      context: ./event-service
+      dockerfile: Dockerfile
+    container_name: event-service
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://event-db:5432/event_service
+      SPRING_DATASOURCE_USERNAME: event_user
+      SPRING_DATASOURCE_PASSWORD: event_password
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    depends_on:
+      - event-db
+      - redis
+    networks:
+      - event-booking-network
+
+  ticket-service:
+    build:
+      context: ./ticket-service
+      dockerfile: Dockerfile
+    container_name: ticket-service
+    ports:
+      - "8083:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ticket-db:5432/ticket_service
+      SPRING_DATASOURCE_USERNAME: ticket_user
+      SPRING_DATASOURCE_PASSWORD: ticket_password
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    depends_on:
+      - ticket-db
+      - redis
+    networks:
+      - event-booking-network
+
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service
+    ports:
+      - "8084:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://payment-db:5432/payment_service
+      SPRING_DATASOURCE_USERNAME: payment_user
+      SPRING_DATASOURCE_PASSWORD: payment_password
+    depends_on:
+      - payment-db
+    networks:
+      - event-booking-network
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8085:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://notification-db:5432/notification_service
+      SPRING_DATASOURCE_USERNAME: notification_user
+      SPRING_DATASOURCE_PASSWORD: notification_password
+    depends_on:
+      - notification-db
+    networks:
+      - event-booking-network
+
+volumes:
+  auth_db_data:
+  event_db_data:
+  ticket_db_data:
+  payment_db_data:
+  notification_db_data:
+  redis_data:
+
+networks:
+  event-booking-network:
+    driver: bridge

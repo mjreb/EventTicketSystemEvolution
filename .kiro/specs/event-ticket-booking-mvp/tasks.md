@@ -31,7 +31,14 @@
     - Design Redis caching strategy for search results
     - _Requirements: 5.1-5.5, 6.1-6.5_
 
-  - [ ] 2.3 Design Ticket Service architecture
+  - [x] 2.3 Design Ticket Service architecture
+    - [x] 2.3.1 Create detailed Ticket Service design document
+      - Document service architecture and component interactions
+      - Define data flow diagrams for ticket operations and inventory management
+      - Create database schema documentation with concurrency control patterns
+      - Document QR code generation and validation system architecture
+      - Define Redis-based inventory tracking and reservation system design
+      - _Requirements: 5.4, 7.1-7.5, 10.1-10.5_
     - Define TicketType, Ticket, and TicketReservation entities
     - Design REST API endpoints for inventory and reservation management
     - Create database schema with concurrency control

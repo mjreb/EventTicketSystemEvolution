@@ -28,6 +28,11 @@ public class JwtUtil {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public java.util.UUID extractUserId(String token) {
+        String userIdStr = extractClaim(token, claims -> claims.get("userId", String.class));
+        return userIdStr != null ? java.util.UUID.fromString(userIdStr) : null;
+    }
+
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }

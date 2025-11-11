@@ -270,6 +270,9 @@ public class AuthServiceImpl implements AuthService {
             throw new ValidationException("Passwords do not match");
         }
         
+        // Validate password complexity
+        validatePasswordComplexity(request.getNewPassword());
+        
         Optional<PasswordResetToken> tokenOpt = passwordResetTokenRepository
                 .findValidTokenByToken(request.getToken(), LocalDateTime.now());
         

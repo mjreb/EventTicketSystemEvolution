@@ -92,7 +92,7 @@
     - Implement account lockout after failed attempts
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [ ] 3.3 Add password reset functionality
+  - [x] 3.3 Add password reset functionality
     - Create password reset request endpoint
     - Implement time-limited reset tokens (15 minutes)
     - Add new password validation and update

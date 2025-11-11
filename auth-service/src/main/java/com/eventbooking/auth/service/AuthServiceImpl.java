@@ -1,10 +1,12 @@
 package com.eventbooking.auth.service;
 
 import com.eventbooking.auth.dto.*;
+import com.eventbooking.auth.entity.EmailVerificationToken;
 import com.eventbooking.auth.entity.PasswordResetToken;
 import com.eventbooking.auth.entity.User;
 import com.eventbooking.auth.entity.UserSession;
 import com.eventbooking.auth.model.RedisUserSession;
+import com.eventbooking.auth.repository.EmailVerificationTokenRepository;
 import com.eventbooking.auth.repository.PasswordResetTokenRepository;
 import com.eventbooking.auth.repository.RedisUserSessionRepository;
 import com.eventbooking.auth.repository.UserRepository;
@@ -37,6 +39,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final UserSessionRepository userSessionRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final RedisUserSessionRepository redisUserSessionRepository;
     private final JwtTokenService jwtTokenService;
     private final EmailService emailService;
@@ -46,12 +49,14 @@ public class AuthServiceImpl implements AuthService {
     public AuthServiceImpl(UserRepository userRepository,
                           UserSessionRepository userSessionRepository,
                           PasswordResetTokenRepository passwordResetTokenRepository,
+                          EmailVerificationTokenRepository emailVerificationTokenRepository,
                           RedisUserSessionRepository redisUserSessionRepository,
                           JwtTokenService jwtTokenService,
                           EmailService emailService) {
         this.userRepository = userRepository;
         this.userSessionRepository = userSessionRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.emailVerificationTokenRepository = emailVerificationTokenRepository;
         this.redisUserSessionRepository = redisUserSessionRepository;
         this.jwtTokenService = jwtTokenService;
         this.emailService = emailService;
@@ -66,6 +71,9 @@ public class AuthServiceImpl implements AuthService {
         if (!request.isPasswordMatching()) {
             throw new ValidationException("Passwords do not match");
         }
+        
+        // Validate password complexity (additional validation beyond annotation)
+        validatePasswordComplexity(request.getPassword());
         
         // Check if user already exists
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -83,10 +91,11 @@ public class AuthServiceImpl implements AuthService {
         
         user = userRepository.save(user);
         
-        // Send verification email
+        // Create and send verification email
         try {
             String verificationToken = generateVerificationToken(user);
             emailService.sendEmailVerification(user.getEmail(), user.getFirstName(), verificationToken);
+            logger.info("Verification email sent successfully to: {}", user.getEmail());
         } catch (Exception e) {
             logger.error("Failed to send verification email for user {}: {}", user.getEmail(), e.getMessage());
             // Don't fail registration if email sending fails
@@ -99,29 +108,36 @@ public class AuthServiceImpl implements AuthService {
     public void verifyEmail(String token) {
         logger.info("Verifying email with token: {}", token);
         
-        // For simplicity, we'll decode the token to get user ID
-        // In production, you might want to store verification tokens in database
-        try {
-            UUID userId = UUID.fromString(token); // Simplified - in real app, decode properly
-            Optional<User> userOpt = userRepository.findById(userId);
-            
-            if (userOpt.isEmpty()) {
-                throw new ValidationException("Invalid verification token");
-            }
-            
-            User user = userOpt.get();
-            if (user.isEmailVerified()) {
-                throw new ValidationException("Email is already verified");
-            }
-            
-            user.setEmailVerified(true);
-            userRepository.save(user);
-            
-            logger.info("Email verified successfully for user: {}", user.getEmail());
-            
-        } catch (IllegalArgumentException e) {
-            throw new ValidationException("Invalid verification token format");
+        // Find valid verification token
+        Optional<EmailVerificationToken> tokenOpt = emailVerificationTokenRepository
+                .findValidTokenByToken(token, LocalDateTime.now());
+        
+        if (tokenOpt.isEmpty()) {
+            throw new ValidationException("Invalid or expired verification token");
         }
+        
+        EmailVerificationToken verificationToken = tokenOpt.get();
+        Optional<User> userOpt = userRepository.findById(verificationToken.getUserId());
+        
+        if (userOpt.isEmpty()) {
+            throw new ValidationException("User not found");
+        }
+        
+        User user = userOpt.get();
+        
+        if (user.isEmailVerified()) {
+            throw new ValidationException("Email is already verified");
+        }
+        
+        // Mark user as verified
+        user.setEmailVerified(true);
+        userRepository.save(user);
+        
+        // Mark token as used
+        verificationToken.markAsUsed();
+        emailVerificationTokenRepository.save(verificationToken);
+        
+        logger.info("Email verified successfully for user: {}", user.getEmail());
     }
     
     @Override
@@ -312,8 +328,14 @@ public class AuthServiceImpl implements AuthService {
             throw new ValidationException("Email is already verified");
         }
         
+        // Invalidate existing tokens
+        emailVerificationTokenRepository.invalidateAllUserTokens(user.getId(), LocalDateTime.now());
+        
+        // Generate and send new verification token
         String verificationToken = generateVerificationToken(user);
         emailService.sendEmailVerification(user.getEmail(), user.getFirstName(), verificationToken);
+        
+        logger.info("Resent verification email to: {}", user.getEmail());
     }
     
     // Helper methods
@@ -387,8 +409,45 @@ public class AuthServiceImpl implements AuthService {
     }
     
     private String generateVerificationToken(User user) {
-        // Simplified - in production, use proper token generation
-        return user.getId().toString();
+        // Generate unique verification token
+        String token = UUID.randomUUID().toString();
+        LocalDateTime expiresAt = LocalDateTime.now().plusHours(EMAIL_VERIFICATION_EXPIRY_HOURS);
+        
+        // Save token to database
+        EmailVerificationToken verificationToken = new EmailVerificationToken(
+            user.getId(),
+            token,
+            expiresAt
+        );
+        emailVerificationTokenRepository.save(verificationToken);
+        
+        return token;
+    }
+    
+    private void validatePasswordComplexity(String password) {
+        if (password == null || password.length() < 12) {
+            throw new ValidationException("Password must be at least 12 characters long");
+        }
+        
+        boolean hasUpperCase = password.chars().anyMatch(Character::isUpperCase);
+        boolean hasLowerCase = password.chars().anyMatch(Character::isLowerCase);
+        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
+        boolean hasSpecialChar = password.chars().anyMatch(ch -> 
+            "@$!%*?&".indexOf(ch) >= 0
+        );
+        
+        if (!hasUpperCase) {
+            throw new ValidationException("Password must contain at least one uppercase letter");
+        }
+        if (!hasLowerCase) {
+            throw new ValidationException("Password must contain at least one lowercase letter");
+        }
+        if (!hasDigit) {
+            throw new ValidationException("Password must contain at least one number");
+        }
+        if (!hasSpecialChar) {
+            throw new ValidationException("Password must contain at least one special character (@$!%*?&)");
+        }
     }
     
     private String hashToken(String token) {

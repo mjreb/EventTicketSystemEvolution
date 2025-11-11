@@ -46,7 +46,14 @@
     - Design Redis-based inventory tracking and reservation system
     - _Requirements: 5.4, 7.1-7.5, 10.1-10.5_
 
-  - [ ] 2.4 Design Payment Service architecture
+  - [x] 2.4 Design Payment Service architecture
+    - [x] 2.4.1 Create detailed Payment Service design document
+      - Document service architecture and component interactions
+      - Define data flow diagrams for payment processing and order management
+      - Create database schema documentation with transaction integrity patterns
+      - Document Stripe integration architecture and error handling strategies
+      - Define order state machine and status transition flows
+      - _Requirements: 8.1-8.5, 9.1-9.5_
     - Define Order, OrderItem, and PaymentTransaction entities
     - Design REST API endpoints for order processing
     - Create database schema with transaction integrity
@@ -54,7 +61,7 @@
     - Design order state machine and status transitions
     - _Requirements: 8.1-8.5, 9.1-9.5_
 
-  - [ ] 2.5 Design Notification Service architecture
+  - [x] 2.5 Design Notification Service architecture
     - Define NotificationTemplate, Notification, and DeliveryStatus entities
     - Design REST API endpoints for template and notification management
     - Create database schema for template versioning
@@ -62,7 +69,7 @@
     - Design SQS message processing for asynchronous notifications
     - _Requirements: 11.1-11.5, 12.1-12.5_
 
-  - [ ] 2.6 Design inter-service communication patterns
+  - [x] 2.6 Design inter-service communication patterns
     - Define service-to-service API contracts and DTOs
     - Design event-driven messaging patterns with SQS/SNS
     - Create distributed transaction patterns (Saga pattern)
@@ -71,7 +78,7 @@
     - _Requirements: 8.3, 9.2, 9.4, 9.5, 10.1, 12.2_
 
 - [ ] 3. Implement Authentication Service
-  - [ ] 3.1 Create user registration and email verification functionality
+  - [x] 3.1 Create user registration and email verification functionality
     - Implement User entity and repository with PostgreSQL
     - Create registration endpoint with input validation
     - Implement email verification with time-limited tokens

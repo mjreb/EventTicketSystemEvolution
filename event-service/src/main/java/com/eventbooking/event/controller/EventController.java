@@ -4,16 +4,21 @@ import com.eventbooking.common.dto.ApiResponse;
 import com.eventbooking.common.util.JwtUtil;
 import com.eventbooking.event.dto.CreateEventRequest;
 import com.eventbooking.event.dto.EventDto;
+import com.eventbooking.event.dto.ImageUploadResponse;
 import com.eventbooking.event.dto.UpdateEventRequest;
 import com.eventbooking.event.service.EventService;
+import com.eventbooking.event.service.ImageService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.UUID;
 
 @RestController
@@ -22,11 +27,13 @@ import java.util.UUID;
 public class EventController {
     
     private final EventService eventService;
+    private final ImageService imageService;
     private final JwtUtil jwtUtil;
     
     @Autowired
-    public EventController(EventService eventService, JwtUtil jwtUtil) {
+    public EventController(EventService eventService, ImageService imageService, JwtUtil jwtUtil) {
         this.eventService = eventService;
+        this.imageService = imageService;
         this.jwtUtil = jwtUtil;
     }
     
@@ -114,6 +121,54 @@ public class EventController {
         EventDto event = eventService.cancelEvent(eventId, organizerId);
         
         return ResponseEntity.ok(ApiResponse.success(event));
+    }
+    
+    @PostMapping(value = "/{eventId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ImageUploadResponse>> uploadEventImage(
+            @PathVariable UUID eventId,
+            @RequestParam("image") MultipartFile image,
+            @RequestHeader("Authorization") String authHeader) throws IOException {
+        
+        UUID organizerId = extractUserIdFromToken(authHeader);
+        
+        // Upload image to S3
+        String s3Url = imageService.uploadEventImage(image, eventId);
+        
+        // Update event with image URL
+        EventDto event = eventService.updateEventImage(eventId, s3Url, organizerId);
+        
+        // Get CDN URL
+        String cdnUrl = imageService.getCdnUrl(s3Url);
+        
+        ImageUploadResponse response = new ImageUploadResponse(
+            s3Url,
+            cdnUrl,
+            image.getOriginalFilename(),
+            image.getSize()
+        );
+        
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+    
+    @DeleteMapping("/{eventId}/image")
+    public ResponseEntity<ApiResponse<EventDto>> deleteEventImage(
+            @PathVariable UUID eventId,
+            @RequestHeader("Authorization") String authHeader) {
+        
+        UUID organizerId = extractUserIdFromToken(authHeader);
+        
+        // Get current event to retrieve image URL
+        EventDto event = eventService.getEventById(eventId);
+        
+        // Delete image from S3 if exists
+        if (event.getImageUrl() != null && !event.getImageUrl().isEmpty()) {
+            imageService.deleteEventImage(event.getImageUrl());
+        }
+        
+        // Update event to remove image URL
+        EventDto updatedEvent = eventService.updateEventImage(eventId, null, organizerId);
+        
+        return ResponseEntity.ok(ApiResponse.success(updatedEvent));
     }
     
     // Internal API for other services

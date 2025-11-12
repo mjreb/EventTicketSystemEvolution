@@ -55,6 +55,10 @@ aws:
   s3:
     bucket-name: ${AWS_S3_BUCKET:event-images-bucket}
     region: ${AWS_REGION:us-east-1}
+  cloudfront:
+    domain: ${AWS_CLOUDFRONT_DOMAIN:}
+  access-key-id: ${AWS_ACCESS_KEY_ID:}
+  secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
 
 ---
 spring:

@@ -142,7 +142,7 @@
     - Implement ticket reservation system with time limits
     - _Requirements: 5.4, 7.2, 7.3, 7.4_
 
-  - [ ] 5.2 Add ticket selection and reservation functionality
+  - [x] 5.2 Add ticket selection and reservation functionality
     - Create ticket selection endpoint with availability validation
     - Implement 15-minute reservation system
     - Add inventory checking to prevent overselling

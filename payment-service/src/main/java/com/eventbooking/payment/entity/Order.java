@@ -90,6 +90,10 @@ public class Order {
     @Builder.Default
     private List<OrderItem> orderItems = new ArrayList<>();
     
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<PaymentTransaction> transactions = new ArrayList<>();
+    
     public void addOrderItem(OrderItem item) {
         orderItems.add(item);
         item.setOrder(this);

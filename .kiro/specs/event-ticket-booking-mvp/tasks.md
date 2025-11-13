@@ -163,7 +163,7 @@
     - _Requirements: 5.4, 7.1-7.5, 10.1-10.5_
 
 - [ ] 6. Implement Payment Service
-  - [ ] 6.1 Create order management system
+  - [x] 6.1 Create order management system
     - Implement Order and OrderItem entities
     - Create order creation endpoint with validation
     - Add order status tracking and updates

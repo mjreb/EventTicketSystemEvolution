@@ -177,14 +177,14 @@
     - Implement payment failure handling and error messages
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-  - [-] 6.3 Add order confirmation and cancellation
+  - [x] 6.3 Add order confirmation and cancellation
     - Create order confirmation endpoint
     - Implement order cancellation within specified timeframe
     - Add partial order cancellation support
     - Create refund processing integration
     - _Requirements: 9.1, 9.2, 9.4, 9.5_
 
-  - [ ]* 6.4 Write unit tests for payment processing
+  - [x] 6.4 Write unit tests for payment processing
     - Test order creation and validation
     - Test payment gateway integration and error handling
     - Test order confirmation and cancellation flows
